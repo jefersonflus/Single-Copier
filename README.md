@@ -136,7 +136,3 @@ Antes de contribuir, por favor:
 ## Licença
 
 Este projeto é distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para obter mais detalhes.
-
----
-
-**Contato**: Se você tiver dúvidas ou precisar de assistência, sinta-se à vontade para entrar em contato.
