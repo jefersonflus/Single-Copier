@@ -1,138 +1,162 @@
 # Single Copier
 
-O **Single Copier** é um script em Python que permite copiar uma única página de um site para uma pasta local. Ele baixa a página HTML fornecida e todos os recursos associados, como imagens, arquivos CSS, JavaScript, fontes e vídeos referenciados nessa página específica. O script ajusta automaticamente os caminhos nos arquivos HTML e CSS para que os recursos locais sejam usados, permitindo que você visualize a página offline.
+Este script permite copiar uma página web para uma pasta local, incluindo todos os recursos referenciados, como imagens, CSS, JavaScript, fontes e vídeos. É especialmente útil para salvar páginas para visualização offline ou para arquivamento.
 
-## Índice
+## Recursos
 
-- [Características](#características)
-- [Requisitos](#requisitos)
-- [Instalação](#instalação)
-- [Uso](#uso)
-- [Funcionamento](#funcionamento)
-- [Limitações e Notas](#limitações-e-notas)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
+- **Copia páginas web inteiras**, incluindo recursos estáticos.
+- **Processa arquivos CSS**, baixando recursos referenciados e arquivos importados via `@import`.
+- **Lida com conteúdo dinâmico**, permitindo interação manual com a página antes da captura (opcional).
+- **Preserva a estrutura de diretórios**, organizando recursos em pastas como `css`, `js`, `img`, `fonts`, etc.
 
-## Características
+## Pré-requisitos
 
-- **Download de Página Única**: Baixa a página HTML especificada e todos os recursos referenciados nela.
-- **Atualização de Caminhos**: Ajusta os caminhos nos arquivos HTML e CSS para apontar para os recursos locais.
-- **Paralelismo**: Utiliza threads para baixar múltiplos recursos simultaneamente, acelerando o processo.
-- **Respeito ao Domínio**: Limita o download apenas aos recursos hospedados no mesmo domínio da página fornecida.
-- **Tratamento de Erros**: Fornece logs detalhados para ajudar na identificação de problemas durante o download.
-- **Configuração via Linha de Comando**: Permite especificar a URL da página e o diretório de saída através de argumentos na linha de comando.
-
-## Requisitos
-
-- Python 3.6 ou superior
-- Bibliotecas Python:
-
+- Python 3.x instalado no sistema.
+- Módulos Python adicionais:
   - `requests`
   - `beautifulsoup4`
-  - `lxml` (opcional, mas recomendado para melhor desempenho)
+  - `lxml`
+  - `selenium` (opcional, para interação manual)
+  - `webdriver-manager` (opcional, para interação manual)
 
-- **Nota**: As bibliotecas podem ser instaladas usando o `pip`.
+Você pode instalar os módulos necessários usando o `pip`:
+
+```bash
+pip install requests beautifulsoup4 lxml selenium webdriver-manager
+```
 
 ## Instalação
 
-1. **Clone o repositório ou copie o script para o seu ambiente local**.
+1. **Clone ou faça download** deste repositório para o seu computador.
 
-2. **Instale as bibliotecas necessárias**:
-
-   Abra o terminal ou prompt de comando e execute:
+2. Certifique-se de que você tem o Python 3 instalado. Você pode verificar executando:
 
    ```bash
-   pip install requests beautifulsoup4 lxml
+   python --version
    ```
+
+   ou
+
+   ```bash
+   python3 --version
+   ```
+
+3. **Instale as dependências** listadas acima.
 
 ## Uso
 
-Execute o script via linha de comando, especificando a URL da página que deseja copiar e o nome da pasta de saída.
-
 ```bash
-python single_copier.py <URL_DA_PÁGINA> <PASTA_DE_SAÍDA>
+python copier.py <URL_DA_PÁGINA> <PASTA_DE_SAÍDA> [opções]
 ```
 
-**Exemplo**:
+### Parâmetros:
+
+- `<URL_DA_PÁGINA>`: A URL completa da página que você deseja copiar.
+- `<PASTA_DE_SAÍDA>`: O nome da pasta onde os arquivos serão salvos.
+
+### Opções:
+
+- `-o`, `--open-browser`: Abre um navegador para interação manual antes de capturar a página. Útil para páginas que requerem login, resolução de CAPTCHA ou carregam conteúdo via JavaScript.
+
+### Exemplos:
+
+#### Copiar uma página sem interação manual:
 
 ```bash
-python single_copier.py https://exemplo.com/pagina.html pagina_copiada
+python copier.py https://exemplo.com/pagina.html pagina_copiada
 ```
 
-Isso irá:
+#### Copiar uma página com interação manual:
 
-- Baixar o conteúdo de `https://exemplo.com/pagina.html`.
-- Criar uma pasta chamada `pagina_copiada` no diretório atual.
-- Salvar todos os arquivos baixados dentro da pasta `pagina_copiada`, organizados em subpastas (`img`, `css`, `js`, etc.).
-- Gerar um arquivo `index.html` na pasta de saída, com os caminhos atualizados para os recursos locais.
+```bash
+python copier.py https://exemplo.com/pagina_dinamica.html pagina_copiada -o
+```
 
-## Funcionamento
+Ao usar a opção `-o`, o navegador será aberto e você terá **1 minuto** para interagir com a página. Após esse tempo, o navegador será fechado automaticamente e o script continuará o processamento usando o código-fonte da página naquele momento.
 
-1. **Configuração Inicial**:
+### Personalizar o Tempo de Espera (Opcional):
 
-   - O script inicia criando a estrutura de pastas necessária dentro do diretório de saída (por padrão: `img`, `css`, `js`, `videos`, `fonts`, `other`).
-   - Configura uma sessão HTTP usando `requests.Session()` para reutilizar conexões e definir cabeçalhos padrão, simulando um navegador real.
+Se desejar alterar o tempo que o navegador fica aberto ao usar a opção `-o`, você pode modificar o valor de `timeout` no código do script, na função `copy_site`:
 
-2. **Download da Página Especificada**:
+```python
+timeout = 60  # Tempo em segundos
+```
 
-   - Acessa a URL fornecida e faz o download do conteúdo HTML.
-   - Utiliza o `BeautifulSoup` para analisar o HTML e encontrar todos os elementos que referenciam recursos externos presentes nessa página.
+## Como Funciona
 
-3. **Download dos Recursos**:
+1. **Captura da Página**:
 
-   - Identifica recursos como imagens, arquivos CSS, scripts, vídeos e fontes referenciados na página.
-   - Utiliza um `ThreadPoolExecutor` para baixar múltiplos recursos em paralelo.
-   - Limita o download apenas a recursos hospedados no mesmo domínio da página original.
-   - Atualiza os atributos dos elementos no HTML para apontar para os arquivos locais baixados.
+   - **Sem a opção `-o`**: O script faz uma requisição HTTP à URL fornecida e obtém o código-fonte da página.
+   - **Com a opção `-o`**: O script abre um navegador usando o Selenium, permite interação manual por um tempo especificado, e então captura o código-fonte da página.
 
-4. **Processamento de Arquivos CSS**:
+2. **Processamento do Código-Fonte**:
 
-   - Analisa os arquivos CSS referenciados na página para encontrar URLs de recursos (como imagens de fundo e fontes).
-   - Baixa esses recursos e atualiza as URLs dentro dos arquivos CSS para apontar para os arquivos locais.
+   - O script analisa o código-fonte usando o BeautifulSoup.
+   - Identifica todos os recursos referenciados (imagens, CSS, JS, fontes, vídeos, etc.).
 
-5. **Salvamento dos Arquivos**:
+3. **Download de Recursos**:
 
-   - Salva todos os recursos baixados nas pastas correspondentes dentro do diretório de saída.
-   - Gera um arquivo `index.html` com o conteúdo atualizado.
+   - Baixa todos os recursos referenciados, organizando-os em pastas apropriadas.
+   - Processa arquivos CSS, baixando recursos referenciados em `url()` e arquivos importados via `@import`.
 
-6. **Logs e Tratamento de Erros**:
+4. **Atualização de Referências**:
 
-   - Fornece logs informativos sobre o progresso do download.
-   - Trata exceções e erros HTTP, registrando avisos ou erros conforme necessário.
-   - Ignora recursos que não podem ser baixados devido a erros de autorização (códigos HTTP 401).
+   - Atualiza as referências nos arquivos HTML e CSS para apontar para os recursos locais baixados.
 
-## Limitações e Notas
+5. **Salvamento**:
 
-- **Apenas Página Fornecida**: O script baixa apenas a página HTML especificada e os recursos diretamente referenciados nela. Não segue links para outras páginas ou baixa o site inteiro.
+   - Salva o código-fonte atualizado na pasta de saída como `index.html`.
 
-- **Conteúdo Dinâmico**: O script não captura conteúdo carregado dinamicamente via JavaScript (por exemplo, dados carregados após a renderização inicial da página). Para páginas altamente dinâmicas, considere usar ferramentas como o Selenium ou Playwright.
+## Estrutura de Pastas
 
-- **Recursos Protegidos**: Alguns recursos podem estar protegidos e exigir autenticação ou tokens de acesso. O script ignora esses recursos e registra um aviso.
+Após a execução, a pasta de saída terá a seguinte estrutura:
 
-- **Respeito às Políticas do Site**:
+```
+<PASTA_DE_SAÍDA>/
+├── index.html
+├── css/
+├── js/
+├── img/
+├── fonts/
+├── videos/
+└── other/
+```
 
-  - Certifique-se de ter permissão para baixar e usar os recursos da página.
-  - Respeite o arquivo `robots.txt` e os termos de uso do site.
-  - Evite violar direitos autorais ou usar o script para atividades não éticas.
+## Considerações Importantes
 
-- **Escopo do Download**: O script baixa apenas recursos hospedados no mesmo domínio da página fornecida. Recursos externos (por exemplo, bibliotecas CDN) não são baixados.
+- **Respeito aos Termos de Uso**: Certifique-se de ter permissão para baixar e armazenar o conteúdo das páginas que você está copiando. Respeite os termos de uso dos sites e evite violar direitos autorais ou políticas de acesso.
 
-- **Desempenho**: O uso de threads acelera o download, mas pode aumentar a carga na sua conexão de internet e no servidor de destino. Use com responsabilidade.
+- **Limitações**:
 
-- **Compatibilidade de Sistemas Operacionais**: O script utiliza a biblioteca `pathlib` para garantir compatibilidade entre diferentes sistemas operacionais (Windows, macOS, Linux).
+  - O script não pode baixar recursos que não existem no servidor ou que estão protegidos por mecanismos de segurança.
+  - Alguns sites podem bloquear requisições automatizadas. Se você enfrentar problemas, tente usar a opção `-o` para interação manual.
 
-## Contribuição
+- **Recursos Carregados via JavaScript**:
 
-Contribuições são bem-vindas! Se você deseja melhorar o **Single Copier**, sinta-se à vontade para:
+  - Para páginas que carregam conteúdo dinamicamente via JavaScript, é recomendado usar a opção `-o` para permitir que o conteúdo seja carregado antes da captura.
 
-- Abrir uma *issue* para relatar bugs ou sugerir melhorias.
-- Enviar um *pull request* com correções ou novos recursos.
+- **Dependências do Selenium**:
 
-Antes de contribuir, por favor:
+  - Se utilizar a opção `-o`, certifique-se de ter o Google Chrome instalado e que o ChromeDriver está configurado corretamente. O `webdriver-manager` ajuda a gerenciar o ChromeDriver automaticamente.
 
-- Certifique-se de que seu código segue as boas práticas de codificação em Python.
-- Teste suas alterações para garantir que não introduzam novos problemas.
+## Dicas de Depuração
+
+- **Logs Detalhados**:
+
+  - O script utiliza o módulo `logging` para fornecer informações sobre o processo. Por padrão, o nível de log é `INFO`. Para obter logs mais detalhados (por exemplo, para depuração), você pode alterar o nível de log para `DEBUG` no código:
+
+    ```python
+    logging.basicConfig(level=logging.DEBUG)
+    ```
+
+- **Verificação Manual**:
+
+  - Se alguns recursos não foram baixados ou a página não está sendo exibida corretamente, verifique manualmente os arquivos HTML e CSS para identificar possíveis problemas nas referências.
+
+## Contribuições
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests com melhorias, correções de bugs ou novos recursos.
 
 ## Licença
 
-Este projeto é distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para obter mais detalhes.
+Este projeto está licenciado sob a Licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
