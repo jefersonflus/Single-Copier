@@ -239,7 +239,7 @@ def copy_site(url, output_folder, open_browser=False):
     try:
         if open_browser:
             # Usar o Selenium para obter o código-fonte após interação do usuário
-            timeout = 60  # 1 minuto
+            timeout = 30  # 1 minuto
             page_content, final_url = get_page_source_with_selenium(url, timeout)
         else:
             response = session.get(url, timeout=10)
